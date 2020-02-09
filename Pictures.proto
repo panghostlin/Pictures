@@ -1,0 +1,79 @@
+syntax = "proto3";
+
+/**************************************************************************
+**	SERVICES
+**************************************************************************/
+service PicturesService {
+	rpc UploadPicture(stream UploadPictureRequest) returns (stream UploadPictureResponse);
+	rpc DownloadPicture(DownloadPictureRequest) returns (stream DownloadPictureResponse);
+	rpc DeletePictures(DeletePicturesRequest) returns (DeletePicturesResponse);
+
+	rpc SetPicturesAlbum(SetPicturesAlbumRequest) returns (SetPicturesAlbumResponse);
+
+	rpc ListPicturesByMemberID(ListPicturesByMemberIDRequest) returns (ListPicturesByMemberIDResponse);
+	rpc ListPicturesByAlbumID(ListPicturesByAlbumIDRequest) returns (ListPicturesByAlbumIDResponse);
+}
+
+/**************************************************************************
+**	RPCS
+**************************************************************************/
+message UploadPictureRequest {
+	bytes chunk = 1;
+	string memberID = 2;
+	string albumID = 3;
+	UploadPictureRequest_Content content = 4;
+}
+message UploadPictureResponse {
+	int32 step = 1;
+	ListPictures_Content picture = 2;
+	bool success = 3;
+}
+
+message DownloadPictureRequest {
+	string pictureID = 1;
+	string pictureSize = 2;
+	string hashKey = 3;
+}
+message DownloadPictureResponse {
+	bytes chunk = 1;
+	string contentType = 2;
+	uint32 width = 3;
+	uint32 height = 4;
+}
+
+message DeletePicturesRequest {repeated string picturesID = 1; string memberID = 2;}
+message DeletePicturesResponse {bool success = 1;}
+
+message SetPicturesAlbumRequest {
+	repeated string groupIDs = 1;
+	string albumID = 2;
+	string memberID = 3;
+}
+message SetPicturesAlbumResponse {bool success = 1;}
+
+message ListPicturesByMemberIDRequest {string memberID = 1;}
+message ListPicturesByMemberIDResponse {
+	repeated ListPictures_Content pictures = 1;
+	map<string, ListPictures_Wrapper> picturesAlt = 2;
+}
+
+message ListPicturesByAlbumIDRequest {string memberID = 1; string albumID = 2;}
+message ListPicturesByAlbumIDResponse {repeated ListPictures_Content pictures = 1;}
+
+/**************************************************************************
+**	HELPERS
+**************************************************************************/
+message	UploadPictureRequest_Content {
+	string name = 1;
+	string type = 2;
+	string originalTime = 3;
+}
+message ListPictures_Wrapper {
+	repeated ListPictures_Content picturesAlt = 1;
+}
+message ListPictures_Content {
+	string uri = 1;
+	string originalTime = 2;
+	uint32 width = 3;
+	uint32 height = 4;
+}
