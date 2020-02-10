@@ -12,5 +12,4 @@ RUN CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo -o pang
 RUN chmod +x wait-for-it.sh
 
 ENTRYPOINT [ "/bin/bash", "-c" ]
-CMD ["./wait-for-it.sh panghostlin-postgre:54320 --strict --timeout=2" , "--" , "./panghostlin-pictures"]
 EXPOSE 8012
