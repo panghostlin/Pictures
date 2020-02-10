@@ -5,7 +5,7 @@
 ** @Filename:				main.go
 **
 ** @Last modified by:		Tbouder
-** @Last modified time:		Monday 10 February 2020 - 12:53:53
+** @Last modified time:		Monday 10 February 2020 - 13:09:33
 *******************************************************************************/
 
 package			main
@@ -248,7 +248,7 @@ func	main()	{
 	connectToDatabase()
 
 	bridges = make(map[string](*grpc.ClientConn))
-	bridges[`keys`] = bridgeMicroservice(`piwigo-keys:8011`, `keys`)
+	bridges[`keys`] = bridgeMicroservice(`panghostlin-keys:8011`, `keys`)
 
 	serveMicroservice()
 }
