@@ -5,7 +5,7 @@
 ** @Filename:				service.albums.go
 **
 ** @Last modified by:		Tbouder
-** @Last modified time:		Monday 10 February 2020 - 12:04:02
+** @Last modified time:		Monday 10 February 2020 - 14:53:04
 *******************************************************************************/
 
 
@@ -45,7 +45,6 @@ func (s *server) CreateAlbum(ctx context.Context, req *pictures.CreateAlbumReque
 		err = P.NewUpdator(PGR).Set(P.S_UpdatorSetter{Key: `AlbumID`, Value: ID}).
 			Where(P.S_UpdatorWhere{Key: `GroupID`, Value: eachPictureID}).
 			Into(`pictures`).Do()
-		logs.Pretty(err)
 	}
 
 	return &pictures.CreateAlbumResponse{AlbumID: ID, Name: req.GetName()}, err
