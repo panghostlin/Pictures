@@ -10,5 +10,6 @@ ADD . /go/src/github.com/panghostlin/Pictures
 
 RUN CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo -o panghostlin-pictures
 
-ENTRYPOINT ["./panghostlin-pictures"]
+ENTRYPOINT [ "/bin/bash", "-c" ]
+CMD ["./wait-for-it.sh" , "panghostlin-postgre" , "--strict" , "--timeout=300" , "--" , "./panghostlin-pictures"]
 EXPOSE 8012
