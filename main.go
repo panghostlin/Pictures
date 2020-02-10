@@ -5,7 +5,7 @@
 ** @Filename:				main.go
 **
 ** @Last modified by:		Tbouder
-** @Last modified time:		Monday 10 February 2020 - 12:03:24
+** @Last modified time:		Monday 10 February 2020 - 12:53:53
 *******************************************************************************/
 
 package			main
@@ -31,6 +31,7 @@ type	Sclients	struct {
 	members		members.MembersServiceClient
 	keys		keys.KeysServiceClient
 	pictures	pictures.PicturesServiceClient
+	albums		pictures.AlbumsServiceClient
 }
 var		PGR *sql.DB
 var		bridges map[string](*grpc.ClientConn)
@@ -122,6 +123,7 @@ func	bridgeInsecureMicroservice(serverName string, clientMS string) (*grpc.Clien
 		clients.keys = keys.NewKeysServiceClient(conn)
 	} else if (clientMS == `pictures`) {
 		clients.pictures = pictures.NewPicturesServiceClient(conn)
+		clients.albums = pictures.NewAlbumsServiceClient(conn)
 	}
 
 	return conn
@@ -198,7 +200,9 @@ func	serveMicroservice() {
 	
 	certificate, err := tls.LoadX509KeyPair(crt, key)
     if err != nil {
-        log.Fatalf("could not load server key pair: %s", err)
+		logs.Warning("could not load server key pair : " + err.Error())
+		logs.Warning("Using insecure connection")
+		serveInsecureMicroservice()
     }
 
     // Create a certificate pool from the certificate authority
