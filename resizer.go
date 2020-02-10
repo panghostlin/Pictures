@@ -5,7 +5,7 @@
 ** @Filename:				resizer.go
 **
 ** @Last modified by:		Tbouder
-** @Last modified time:		Sunday 09 February 2020 - 17:29:05
+** @Last modified time:		Monday 10 February 2020 - 11:56:39
 *******************************************************************************/
 
 package			main
@@ -23,7 +23,7 @@ import			"github.com/microgolang/logs"
 import			"mime"
 import			"errors"
 import			"context"
-import			"gitlab.com/betterpiwigo/sdk/Keys"
+import			"github.com/panghostlin/SDK/Keys"
 
 func	getExtFromMime(contentType string) string {
 	ext, err := mime.ExtensionsByType(contentType)

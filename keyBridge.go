@@ -5,7 +5,7 @@
 ** @Filename:				keyBridge.go
 **
 ** @Last modified by:		Tbouder
-** @Last modified time:		Friday 07 February 2020 - 12:37:43
+** @Last modified time:		Monday 10 February 2020 - 11:56:39
 *******************************************************************************/
 
 package			main
@@ -13,7 +13,7 @@ package			main
 import			"io"
 import			"context"
 import			"github.com/microgolang/logs"
-import			"gitlab.com/betterpiwigo/sdk/Keys"
+import			"github.com/panghostlin/SDK/Keys"
 
 /******************************************************************************
 **	encryptPictureSender

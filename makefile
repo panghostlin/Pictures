@@ -9,29 +9,21 @@
 ################################################################################
 
 SERVICE=Pictures
-SERVICE_PB=${SERVICE}.pb.go
-SERVICE_PROTO=${SERVICE}.proto
-SERVICE_PROTO_ALT=Albums.proto
 SERVICE_PACKAGE=pictures
 
-all: init proto build
-
-init:
-	@-echo "Creating sdk directory"
-	@-mkdir -p ../../sdk && mkdir -p ../../sdk/${SERVICE}
-
-proto:
-	@-make init
-	@-echo "Generating Proto file"
-	@-protoc --go_out=plugins=grpc,import_path=main:./ ${SERVICE_PROTO}
-	@-protoc --go_out=plugins=grpc,import_path=main:./ ${SERVICE_PROTO_ALT}
-	@-protoc --go_out=plugins=grpc,import_path=${SERVICE_PACKAGE}:../../sdk/${SERVICE} ${SERVICE_PROTO}
-	@-protoc --go_out=plugins=grpc,import_path=${SERVICE_PACKAGE}:../../sdk/${SERVICE} ${SERVICE_PROTO_ALT}
+all: build
 
 build:
-	docker build -t piwigo__grpc__${SERVICE_PACKAGE} .
+	docker build -t panghostlin__grpc__${SERVICE_PACKAGE} .
 
-clean:
-	rm -rf ${SERVICE_PB}
+re: clear
+	docker build -t panghostlin__grpc__${SERVICE_PACKAGE} .
+
+run:
+	docker run panghostlin__grpc__${SERVICE_PACKAGE}
+
+clear:
+	docker image remove --force panghostlin__grpc__${SERVICE_PACKAGE}
+
+fullclear: clear
 	rm -rf .env
-	# rm -rf wait-for-it.sh

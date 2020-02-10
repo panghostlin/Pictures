@@ -5,7 +5,7 @@
 ** @Filename:				main.go
 **
 ** @Last modified by:		Tbouder
-** @Last modified time:		Sunday 09 February 2020 - 17:36:42
+** @Last modified time:		Monday 10 February 2020 - 12:03:24
 *******************************************************************************/
 
 package			main
@@ -19,15 +19,18 @@ import			"io/ioutil"
 import			"github.com/microgolang/logs"
 import			"google.golang.org/grpc"
 import			"google.golang.org/grpc/credentials"
-import			"gitlab.com/betterpiwigo/sdk/Keys"
+import			"github.com/panghostlin/SDK/Keys"
+import			"github.com/panghostlin/SDK/Members"
+import			"github.com/panghostlin/SDK/Pictures"
 import			"database/sql"
 import			_ "github.com/lib/pq"
 
-type	server		struct{}
 const	DEFAULT_CHUNK_SIZE = 64 * 1024
-
-type	Sclients struct {
+type	server		struct{}
+type	Sclients	struct {
+	members		members.MembersServiceClient
 	keys		keys.KeysServiceClient
+	pictures	pictures.PicturesServiceClient
 }
 var		PGR *sql.DB
 var		bridges map[string](*grpc.ClientConn)
@@ -37,7 +40,7 @@ func	init() {
 	os.Mkdir(`pictures`, os.ModePerm)
 }
 
-func	connectToPostgre() {
+func	connectToDatabase() {
 	username := os.Getenv("POSTGRE_USERNAME")
 	password := os.Getenv("POSTGRE_PWD")
 	host := os.Getenv("POSTGRE_URI")
@@ -105,7 +108,25 @@ func	connectToPostgre() {
 	
 	logs.Success(`Connected to DB - Localhost`)
 }
-func	InitGRPCBridge(serverName string, clientMS string) (*grpc.ClientConn){
+func	bridgeInsecureMicroservice(serverName string, clientMS string) (*grpc.ClientConn) {
+	logs.Warning("Using insecure connection")
+	conn, err := grpc.Dial(serverName, grpc.WithInsecure())
+    if err != nil {
+		logs.Error("Did not connect", err)
+		return nil
+	}
+
+	if (clientMS == `members`) {
+		clients.members = members.NewMembersServiceClient(conn)
+	} else if (clientMS == `keys`) {
+		clients.keys = keys.NewKeysServiceClient(conn)
+	} else if (clientMS == `pictures`) {
+		clients.pictures = pictures.NewPicturesServiceClient(conn)
+	}
+
+	return conn
+}
+func	bridgeMicroservice(serverName string, clientMS string) (*grpc.ClientConn){
 	crt := `/env/client.crt`
     key := `/env/client.key`
 	caCert  := `/env/ca.crt`
@@ -113,19 +134,22 @@ func	InitGRPCBridge(serverName string, clientMS string) (*grpc.ClientConn){
     // Load the client certificates from disk
     certificate, err := tls.LoadX509KeyPair(crt, key)
     if err != nil {
-        log.Fatalf("could not load client key pair: %s", err)
+		logs.Warning("Did not connect: " + err.Error())
+		return bridgeInsecureMicroservice(serverName, clientMS)
     }
 
     // Create a certificate pool from the certificate authority
     certPool := x509.NewCertPool()
     ca, err := ioutil.ReadFile(caCert)
     if err != nil {
-        log.Fatalf("could not read ca certificate: %s", err)
+		logs.Warning("Did not connect: " + err.Error())
+		return bridgeInsecureMicroservice(serverName, clientMS)
     }
 
     // Append the certificates from the CA
     if ok := certPool.AppendCertsFromPEM(ca); !ok {
-		log.Fatalf("failed to append ca certs")
+		logs.Warning("Did not connect: " + err.Error())
+		return bridgeInsecureMicroservice(serverName, clientMS)
     }
 
     creds := credentials.NewTLS(&tls.Config{
@@ -138,20 +162,36 @@ func	InitGRPCBridge(serverName string, clientMS string) (*grpc.ClientConn){
     // Create a connection with the TLS credentials
 	conn, err := grpc.Dial(serverName, grpc.WithTransportCredentials(creds))
     if err != nil {
-		log.Fatalf("Did not connect: %v", err)
+		logs.Warning("Did not connect: " + err.Error())
+		return bridgeInsecureMicroservice(serverName, clientMS)
 	}
 
 	if (clientMS == `members`) {
-		// clients.members = members.NewMembersServiceClient(conn)
+		clients.members = members.NewMembersServiceClient(conn)
 	} else if (clientMS == `keys`) {
 		clients.keys = keys.NewKeysServiceClient(conn)
 	} else if (clientMS == `pictures`) {
-		// clients.pictures = pictures.NewPicturesServiceClient(conn)
+		clients.pictures = pictures.NewPicturesServiceClient(conn)
 	}
 
 	return conn
 }
-func	initGRPCConnection() {
+func	serveInsecureMicroservice() {
+    lis, err := net.Listen(`tcp`, `:8012`)
+    if err != nil {
+		log.Fatalf("Failed to listen: %v", err)
+    }
+
+	srv := grpc.NewServer()
+	pictures.RegisterPicturesServiceServer(srv, &server{})
+	pictures.RegisterAlbumsServiceServer(srv, &server{})
+	logs.Success(`Running on port: :8012`)
+	if err := srv.Serve(lis); err != nil {
+		logs.Error(err)
+		log.Fatalf("failed to serve: %v", err)
+	}
+}
+func	serveMicroservice() {
 	crt := `/env/server.crt`
     key := `/env/server.key`
 	caCert  := `/env/ca.crt`
@@ -190,8 +230,8 @@ func	initGRPCConnection() {
     srv := grpc.NewServer(grpc.Creds(creds))
 
 	// Register the handler object
-	RegisterPicturesServiceServer(srv, &server{})
-	RegisterAlbumsServiceServer(srv, &server{})
+	pictures.RegisterPicturesServiceServer(srv, &server{})
+	pictures.RegisterAlbumsServiceServer(srv, &server{})
 
     // Serve and Listen
 	logs.Success(`Running on port :8012`)
@@ -201,11 +241,10 @@ func	initGRPCConnection() {
 }
 
 func	main()	{
-	connectToPostgre()
-	bridges = make(map[string](*grpc.ClientConn))
-	// bridges[`keys`] = InitGRPCBridge(`keys.localhost`, `keys`)
-	bridges[`keys`] = InitGRPCBridge(`piwigo-keys:8011`, `keys`)
-	// bridges[`keys`] = InitGRPCBridge(`localhost:8011`, `keys`)
+	connectToDatabase()
 
-	initGRPCConnection()
+	bridges = make(map[string](*grpc.ClientConn))
+	bridges[`keys`] = bridgeMicroservice(`piwigo-keys:8011`, `keys`)
+
+	serveMicroservice()
 }

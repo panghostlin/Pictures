@@ -5,7 +5,7 @@
 ** @Filename:				service.albums.go
 **
 ** @Last modified by:		Tbouder
-** @Last modified time:		Thursday 06 February 2020 - 15:40:24
+** @Last modified time:		Monday 10 February 2020 - 12:04:02
 *******************************************************************************/
 
 
@@ -17,13 +17,14 @@ import (
 	"strconv"
 	"github.com/microgolang/logs"
 	"database/sql"
+	"github.com/panghostlin/SDK/Pictures"
 	P "github.com/microgolang/postgre"
 )
 
 /******************************************************************************
 **	CreateAlbum
 ******************************************************************************/
-func (s *server) CreateAlbum(ctx context.Context, req *CreateAlbumRequest) (*CreateAlbumResponse, error) {
+func (s *server) CreateAlbum(ctx context.Context, req *pictures.CreateAlbumRequest) (*pictures.CreateAlbumResponse, error) {
 	coverPicture0ID := strings.Split(req.GetCoverPicture0ID(), `?`)[0]
 	coverPicture1ID := strings.Split(req.GetCoverPicture1ID(), `?`)[0]
 	coverPicture2ID := strings.Split(req.GetCoverPicture2ID(), `?`)[0]
@@ -47,14 +48,14 @@ func (s *server) CreateAlbum(ctx context.Context, req *CreateAlbumRequest) (*Cre
 		logs.Pretty(err)
 	}
 
-	return &CreateAlbumResponse{AlbumID: ID, Name: req.GetName()}, err
+	return &pictures.CreateAlbumResponse{AlbumID: ID, Name: req.GetName()}, err
 }
 
 /******************************************************************************
 **	GetAlbum
 ******************************************************************************/
-func (s *server) GetAlbum(ctx context.Context, req *GetAlbumRequest) (*GetAlbumResponse, error) {
-	var	response GetAlbumsResponse_Content
+func (s *server) GetAlbum(ctx context.Context, req *pictures.GetAlbumRequest) (*pictures.GetAlbumResponse, error) {
+	var	response pictures.GetAlbumsResponse_Content
 
 	err := P.NewSelector(PGR).
 		From(`albums`).
@@ -65,13 +66,13 @@ func (s *server) GetAlbum(ctx context.Context, req *GetAlbumRequest) (*GetAlbumR
 		).
 		One(&response.AlbumID, &response.Name, &response.NumberOfPictures)
 
-	return &GetAlbumResponse{Album: &response}, err
+	return &pictures.GetAlbumResponse{Album: &response}, err
 }
 
 /******************************************************************************
 **	SetAlbumCover
 ******************************************************************************/
-func (s *server) SetAlbumCover(ctx context.Context, req *SetAlbumCoverRequest) (*SetAlbumCoverResponse, error) {
+func (s *server) SetAlbumCover(ctx context.Context, req *pictures.SetAlbumCoverRequest) (*pictures.SetAlbumCoverResponse, error) {
 	coverPicture0ID := strings.Split(req.GetCoverPicture0ID(), `?`)[0]
 	coverPicture1ID := strings.Split(req.GetCoverPicture1ID(), `?`)[0]
 	coverPicture2ID := strings.Split(req.GetCoverPicture2ID(), `?`)[0]
@@ -85,13 +86,13 @@ func (s *server) SetAlbumCover(ctx context.Context, req *SetAlbumCoverRequest) (
 		P.S_UpdatorWhere{Key: `MemberID`, Value: req.GetMemberID()},
 	).Into(`albums`).Do()
 
-	return &SetAlbumCoverResponse{AlbumID: req.GetAlbumID()}, err
+	return &pictures.SetAlbumCoverResponse{AlbumID: req.GetAlbumID()}, err
 }
 
 /******************************************************************************
 **	ListAlbums
 ******************************************************************************/
-func (s *server) ListAlbums(ctx context.Context, req *ListAlbumsRequest) (*ListAlbumsResponse, error) {
+func (s *server) ListAlbums(ctx context.Context, req *pictures.ListAlbumsRequest) (*pictures.ListAlbumsResponse, error) {
 	type myReturnType struct {
 		ID string
 		Name string
@@ -100,7 +101,7 @@ func (s *server) ListAlbums(ctx context.Context, req *ListAlbumsRequest) (*ListA
 		CoverPicture1ID sql.NullString
 		CoverPicture2ID sql.NullString
 	}
-	var	response []*ListAlbumsResponse_Content
+	var	response []*pictures.ListAlbumsResponse_Content
 
 	rows, err := P.NewSelector(PGR).
 		From(`albums`).
@@ -110,12 +111,12 @@ func (s *server) ListAlbums(ctx context.Context, req *ListAlbumsRequest) (*ListA
 		All(&[]myReturnType{})
 	if (err != nil) {
 		logs.Error(`Impossible to get albums`, err)
-		return &ListAlbumsResponse{Albums: response}, err
+		return &pictures.ListAlbumsResponse{Albums: response}, err
 	}
 
 	assertedRows := rows.([]myReturnType)
 	for _, row := range assertedRows {
-		response = append(response, &ListAlbumsResponse_Content{
+		response = append(response, &pictures.ListAlbumsResponse_Content{
 			AlbumID: row.ID,
 			Name: row.Name,
 			NumberOfPictures: int32(row.NumberOfPictures),
@@ -125,13 +126,13 @@ func (s *server) ListAlbums(ctx context.Context, req *ListAlbumsRequest) (*ListA
 		})
 	}
 
-	return &ListAlbumsResponse{Albums: response}, nil
+	return &pictures.ListAlbumsResponse{Albums: response}, nil
 }
 
 /******************************************************************************
 **	DeleteAlbum
 ******************************************************************************/
-func (s *server) DeleteAlbum(ctx context.Context, req *DeleteAlbumRequest) (*DeleteAlbumResponse, error) {
+func (s *server) DeleteAlbum(ctx context.Context, req *pictures.DeleteAlbumRequest) (*pictures.DeleteAlbumResponse, error) {
 	err := P.NewDeletor(PGR).
 		Into(`albums`).
 		Where(
@@ -140,13 +141,13 @@ func (s *server) DeleteAlbum(ctx context.Context, req *DeleteAlbumRequest) (*Del
 		).
 		Do()
 
-	return &DeleteAlbumResponse{Success: err == nil}, err
+	return &pictures.DeleteAlbumResponse{Success: err == nil}, err
 }
 
 /******************************************************************************
 **	SetAlbumCover
 ******************************************************************************/
-func (s *server) SetAlbumName(ctx context.Context, req *SetAlbumNameRequest) (*SetAlbumNameResponse, error) {
+func (s *server) SetAlbumName(ctx context.Context, req *pictures.SetAlbumNameRequest) (*pictures.SetAlbumNameResponse, error) {
 	err := P.NewUpdator(PGR).Set(
 		P.S_UpdatorSetter{Key: `Name`, Value: req.GetName()},
 	).Where(
@@ -154,5 +155,5 @@ func (s *server) SetAlbumName(ctx context.Context, req *SetAlbumNameRequest) (*S
 		P.S_UpdatorWhere{Key: `MemberID`, Value: req.GetMemberID()},
 	).Into(`albums`).Do()
 
-	return &SetAlbumNameResponse{AlbumID: req.GetAlbumID()}, err
+	return &pictures.SetAlbumNameResponse{AlbumID: req.GetAlbumID()}, err
 }
