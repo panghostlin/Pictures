@@ -5,7 +5,7 @@
 ** @Filename:				service.go
 **
 ** @Last modified by:		Tbouder
-** @Last modified time:		Monday 10 February 2020 - 12:03:50
+** @Last modified time:		Friday 14 February 2020 - 01:09:52
 *******************************************************************************/
 
 package			main
@@ -98,15 +98,16 @@ func (s *server) UploadPicture(stream pictures.PicturesService_UploadPictureServ
 			width, height, originalTime, err := CreatePictureRef(req, req.GetChunk(), GroupID, `500x500`, 500, 0)
 			if (err != nil) {
 				stream.Send(&pictures.UploadPictureResponse{Step: 4, Success: false})
+				stream.Context().Done()
 				return err
 			}
 
 			/******************************************************************
 			**	Create the different thumbnails for this image :
-			**	1000 x 1000 => for access
+			**	1000 x 1000 => for access //Nop
 			**	original => for better
 			******************************************************************/
-			go CreatePictureRef(req, req.GetChunk(), GroupID, `1000x1000`, 1000, 0)
+			// go CreatePictureRef(req, req.GetChunk(), GroupID, `1000x1000`, 1000, 0)
 			go CreatePictureRef(req, req.GetChunk(), GroupID, `original`, 0, 0)
 
 			/******************************************************************

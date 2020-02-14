@@ -5,7 +5,7 @@
 ** @Filename:				main.go
 **
 ** @Last modified by:		Tbouder
-** @Last modified time:		Monday 10 February 2020 - 13:09:33
+** @Last modified time:		Thursday 13 February 2020 - 19:53:24
 *******************************************************************************/
 
 package			main
@@ -27,7 +27,7 @@ import			_ "github.com/lib/pq"
 
 const	DEFAULT_CHUNK_SIZE = 64 * 1024
 type	server		struct{}
-type	Sclients	struct {
+type	sClients	struct {
 	members		members.MembersServiceClient
 	keys		keys.KeysServiceClient
 	pictures	pictures.PicturesServiceClient
@@ -35,7 +35,7 @@ type	Sclients	struct {
 }
 var		PGR *sql.DB
 var		bridges map[string](*grpc.ClientConn)
-var		clients = &Sclients{}
+var		clients = &sClients{}
 
 func	init() {
 	os.Mkdir(`pictures`, os.ModePerm)

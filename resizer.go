@@ -5,7 +5,7 @@
 ** @Filename:				resizer.go
 **
 ** @Last modified by:		Tbouder
-** @Last modified time:		Monday 10 February 2020 - 11:56:39
+** @Last modified time:		Friday 14 February 2020 - 00:41:54
 *******************************************************************************/
 
 package			main
