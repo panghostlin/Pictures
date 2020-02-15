@@ -5,7 +5,7 @@
 ** @Filename:				service.albums.go
 **
 ** @Last modified by:		Tbouder
-** @Last modified time:		Monday 10 February 2020 - 14:53:04
+** @Last modified time:		Saturday 15 February 2020 - 14:29:12
 *******************************************************************************/
 
 
@@ -144,7 +144,7 @@ func (s *server) DeleteAlbum(ctx context.Context, req *pictures.DeleteAlbumReque
 }
 
 /******************************************************************************
-**	SetAlbumCover
+**	SetAlbumName
 ******************************************************************************/
 func (s *server) SetAlbumName(ctx context.Context, req *pictures.SetAlbumNameRequest) (*pictures.SetAlbumNameResponse, error) {
 	err := P.NewUpdator(PGR).Set(

@@ -5,7 +5,7 @@
 ** @Filename:				main.go
 **
 ** @Last modified by:		Tbouder
-** @Last modified time:		Thursday 13 February 2020 - 19:53:24
+** @Last modified time:		Saturday 15 February 2020 - 14:31:31
 *******************************************************************************/
 
 package			main
@@ -90,8 +90,8 @@ func	connectToDatabase() {
 	**************************************************************************/
 	PGR.Exec(`CREATE OR REPLACE FUNCTION public.removeandreordercover() RETURNS trigger LANGUAGE plpgsql AS $function$ begin update albums set CoverPicture0ID = CoverPicture1ID, CoverPicture1ID = CoverPicture2ID, CoverPicture2ID = null where id = old.AlbumID and old.size = 'original' and CoverPicture0ID = old.GroupID; update albums set CoverPicture1ID = CoverPicture2ID, CoverPicture2ID = null where id = old.AlbumID and old.size = 'original' and CoverPicture1ID = old.GroupID; update albums set CoverPicture2ID = null where id = old.AlbumID and old.size = 'original' and CoverPicture2ID = old.GroupID; RETURN new; END; $function$ ;`)
 	PGR.Exec(`CREATE OR REPLACE FUNCTION public.addcover() RETURNS trigger LANGUAGE plpgsql AS $function$ begin UPDATE albums SET CoverPicture0ID = new.GroupID WHERE id = new.AlbumID AND new.Size = 'original' AND CoverPicture0ID is null; UPDATE albums SET CoverPicture1ID = new.GroupID WHERE id = new.AlbumID AND new.Size = 'original' AND CoverPicture1ID is null; UPDATE albums SET CoverPicture2ID = new.GroupID WHERE id = new.AlbumID AND new.Size = 'original' AND CoverPicture2ID is null; RETURN new; END; $function$ ; `)
-	PGR.Exec(`CREATE trigger a_removeCover AFTER DELETE on public.pictures for each row execute function removeAndReorderCover();`)
-	PGR.Exec(`CREATE trigger a_insertCover AFTER INSERT on public.pictures for each row execute function addCover();`)
+	PGR.Exec(`CREATE trigger a_removeCover AFTER DELETE OR UPDATE on public.pictures for each row execute function removeAndReorderCover();`)
+	PGR.Exec(`CREATE trigger a_insertCover AFTER INSERT OR UPDATE on public.pictures for each row execute function addCover();`)
 
 	/**************************************************************************
 	**	Create a function to unset the albumID reference of a picture when the
