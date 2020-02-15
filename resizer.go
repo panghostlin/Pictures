@@ -5,7 +5,7 @@
 ** @Filename:				resizer.go
 **
 ** @Last modified by:		Tbouder
-** @Last modified time:		Friday 14 February 2020 - 00:41:54
+** @Last modified time:		Saturday 15 February 2020 - 14:13:42
 *******************************************************************************/
 
 package			main
@@ -238,14 +238,14 @@ func	createThumbnails(blob []byte, contentType, memberID string, size string, wi
 		return -1, -1, ``, ``, err
 	}
 
-	isSuccess, err := encryptPictureSender(stream, thumbnail, memberID)
-	if (err != nil || !isSuccess) {
+	err = encryptPictureSender(stream, thumbnail, memberID)
+	if (err != nil) {
 		logs.Error(`Impossible to encrypt image`, err)
 		return -1, -1, ``, ``, err
 	}
 
 	response, err := encryptPictureReceiver(stream)
-	if (err != nil || !response.GetSuccess()) {
+	if (err != nil) {
 		logs.Error(`Impossible to encrypt image`, err)
 		return -1, -1, ``, ``, err
 	}
@@ -269,14 +269,14 @@ func	createOriginal(blob []byte, contentType, memberID string) (int, int, string
 		logs.Error(err)
 		return -1, -1, ``, ``, err
 	}
-	isSuccess, err := encryptPictureSender(stream, blob, memberID)
-	if (err != nil || !isSuccess) {
+	err = encryptPictureSender(stream, blob, memberID)
+	if (err != nil) {
 		logs.Error(`Impossible to encrypt image`, err)
 		return -1, -1, ``, ``, err
 	}
 
 	response, err := encryptPictureReceiver(stream)
-	if (err != nil || !response.GetSuccess()) {
+	if (err != nil) {
 		logs.Error(`Impossible to encrypt image`, err)
 		return -1, -1, ``, ``, err
 	}

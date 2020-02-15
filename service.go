@@ -5,7 +5,7 @@
 ** @Filename:				service.go
 **
 ** @Last modified by:		Tbouder
-** @Last modified time:		Friday 14 February 2020 - 01:09:52
+** @Last modified time:		Saturday 15 February 2020 - 14:12:58
 *******************************************************************************/
 
 package			main
@@ -184,8 +184,8 @@ func (s *server) DownloadPicture(req *pictures.DownloadPictureRequest, stream pi
 	**	2. Send the MemberID, the encrypted data, and the picture decryption
 	**	key to the pictures microservice to get the decrypted data.
 	**************************************************************************/
-	isSuccess, decryptedData, err := DecryptPicture(MemberID, encryptedData, EncryptionKey, req.GetHashKey())
-	if (err != nil || !isSuccess) {
+	decryptedData, err := DecryptPicture(MemberID, encryptedData, EncryptionKey, req.GetHashKey())
+	if (err != nil) {
 		logs.Error(`Impossible to decrypt image ` + err.Error())
 		return nil
 	}

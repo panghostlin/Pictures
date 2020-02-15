@@ -5,7 +5,7 @@
 ** @Filename:				keyBridge.go
 **
 ** @Last modified by:		Tbouder
-** @Last modified time:		Monday 10 February 2020 - 11:56:39
+** @Last modified time:		Saturday 15 February 2020 - 14:12:46
 *******************************************************************************/
 
 package			main
@@ -21,7 +21,7 @@ import			"github.com/panghostlin/SDK/Keys"
 **	Open a sending stream, to send the data to encrypt, with the memberID
 **	asking for decryption.
 ******************************************************************************/
-func	encryptPictureSender(stream keys.KeysService_EncryptPictureClient, toEncrypt []byte, memberID string) (bool, error) {
+func	encryptPictureSender(stream keys.KeysService_EncryptPictureClient, toEncrypt []byte, memberID string) (error) {
 	fileSize := len(toEncrypt)
 	chnk := &keys.EncryptPictureRequest{MemberID: memberID}
 
@@ -32,14 +32,14 @@ func	encryptPictureSender(stream keys.KeysService_EncryptPictureClient, toEncryp
 			chnk.Chunk = toEncrypt[currentByte : currentByte + DEFAULT_CHUNK_SIZE]
 		}
 		if err := stream.Send(chnk); err != nil {
-			return false, err
+			return err
 		}
 	}
 
 	if err := stream.CloseSend(); err != nil {
-		return false, err
+		return err
 	}
-	return true, nil
+	return nil
 }
 /******************************************************************************
 **	encryptPictureReceiver
@@ -67,7 +67,6 @@ func	encryptPictureReceiver(stream keys.KeysService_EncryptPictureClient) (*keys
 
 		resp.Chunk = append(resp.GetChunk(), receiver.GetChunk()...)
 		resp.Key = receiver.GetKey()
-		resp.Success = receiver.GetSuccess()
 	}
 }
 
@@ -78,7 +77,7 @@ func	encryptPictureReceiver(stream keys.KeysService_EncryptPictureClient) (*keys
 **	Open a sending stream, to send the data to decrypt, with the memberID
 **	asking for decryption and the picture decryption key.
 ******************************************************************************/
-func	decryptPictureSender(stream keys.KeysService_DecryptPictureClient, toDecrypt []byte, memberID, key, hashKey string) (bool, error) {
+func	decryptPictureSender(stream keys.KeysService_DecryptPictureClient, toDecrypt []byte, memberID, key, hashKey string) (error) {
 	fileSize := len(toDecrypt)
 	req := &keys.DecryptPictureRequest{MemberID: memberID, Key: key, HashKey: hashKey}
 
@@ -89,17 +88,16 @@ func	decryptPictureSender(stream keys.KeysService_DecryptPictureClient, toDecryp
 			req.Chunk = toDecrypt[currentByte : currentByte + DEFAULT_CHUNK_SIZE]
 		}
 		if err := stream.Send(req); err != nil {
-			logs.Info(`CRASH`)
-			// logs.Error(err)
+			logs.Error(err)
 			stream.CloseSend()
-			return false, err
+			return err
 		}
 	}
 
 	if err := stream.CloseSend(); err != nil {
-		return false, err
+		return err
 	}
-	return true, nil
+	return nil
 }
 /******************************************************************************
 **	decryptPictureReceiver
@@ -107,8 +105,6 @@ func	decryptPictureSender(stream keys.KeysService_DecryptPictureClient, toDecryp
 **	Open a receiving stream, waiting to get the get the full decrypted picture
 ******************************************************************************/
 func	decryptPictureReceiver(stream keys.KeysService_DecryptPictureClient) (*keys.DecryptPictureResponse, error) {
-	blob := make([]byte, 0)
-	success := false
 	resp := &keys.DecryptPictureResponse{}
 
 	for {
@@ -120,8 +116,6 @@ func	decryptPictureReceiver(stream keys.KeysService_DecryptPictureClient) (*keys
 
 		receiver, err := stream.Recv()
 		if err == io.EOF {
-			resp.Chunk = blob
-			resp.Success = success
 			stream.Context().Done()
 			return resp, nil
 		}
@@ -130,8 +124,7 @@ func	decryptPictureReceiver(stream keys.KeysService_DecryptPictureClient) (*keys
 			return nil, err
 		}
 
-		blob = append(blob, receiver.GetChunk()...)
-		success = receiver.GetSuccess()
+		resp.Chunk = append(resp.GetChunk(), receiver.GetChunk()...)
 	}
 }
 /******************************************************************************
@@ -139,22 +132,22 @@ func	decryptPictureReceiver(stream keys.KeysService_DecryptPictureClient) (*keys
 **	Bridge function, calling the Key microservice to decrypt a specific data
 **	according to the memberID private key and the image encryption key.
 ******************************************************************************/
-func	DecryptPicture(memberID string, toDecrypt []byte, key, hashKey string) (bool, []byte, error) {
+func	DecryptPicture(memberID string, toDecrypt []byte, key, hashKey string) ([]byte, error) {
 	var stream keys.KeysService_DecryptPictureClient
 	
 	stream, err := clients.keys.DecryptPicture(context.Background())
 	if (err != nil) {
 		logs.Error("Fail to init stream", err)
-		return false, nil, err
+		return nil, err
 	}
 	defer stream.Context().Done()
 
 	/**************************************************************************
 	**	1. Send the data to encrypt to the Key microservice
 	**************************************************************************/
-	isSuccess, err := decryptPictureSender(stream, toDecrypt, memberID, key, hashKey)
-	if (err != nil || !isSuccess) {
-		return false, nil, err
+	err = decryptPictureSender(stream, toDecrypt, memberID, key, hashKey)
+	if (err != nil) {
+		return nil, err
 	}
 
 	/**************************************************************************
@@ -163,12 +156,12 @@ func	DecryptPicture(memberID string, toDecrypt []byte, key, hashKey string) (boo
 	**	Here, we will get our answers
 	**************************************************************************/
 	response, err := decryptPictureReceiver(stream)
-	if (err != nil || !isSuccess) {
-		return false, nil, err
+	if (err != nil) {
+		return nil, err
 	}
 
 	/**************************************************************************
 	**	3. Returns the elements
 	**************************************************************************/
-	return response.GetSuccess(), response.GetChunk(), nil
+	return response.GetChunk(), nil
 }
