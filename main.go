@@ -5,7 +5,7 @@
 ** @Filename:				main.go
 **
 ** @Last modified by:		Tbouder
-** @Last modified time:		Saturday 15 February 2020 - 14:41:40
+** @Last modified time:		Friday 21 February 2020 - 17:49:43
 *******************************************************************************/
 
 package			main
@@ -19,7 +19,6 @@ import			"io/ioutil"
 import			"github.com/microgolang/logs"
 import			"google.golang.org/grpc"
 import			"google.golang.org/grpc/credentials"
-import			"github.com/panghostlin/SDK/Keys"
 import			"github.com/panghostlin/SDK/Members"
 import			"github.com/panghostlin/SDK/Pictures"
 import			"database/sql"
@@ -29,7 +28,6 @@ const	DEFAULT_CHUNK_SIZE = 64 * 1024
 type	server		struct{}
 type	sClients	struct {
 	members		members.MembersServiceClient
-	keys		keys.KeysServiceClient
 	pictures	pictures.PicturesServiceClient
 	albums		pictures.AlbumsServiceClient
 }
@@ -64,6 +62,7 @@ func	connectToDatabase() {
 		Type varchar NULL,
 		Name varchar NULL,
 		EncryptionKey varchar NULL,
+		EncryptionIV varchar NULL,
 		Path varchar NULL,
 		Width int NULL,
 		Height int NULL,
@@ -119,8 +118,6 @@ func	bridgeInsecureMicroservice(serverName string, clientMS string) (*grpc.Clien
 
 	if (clientMS == `members`) {
 		clients.members = members.NewMembersServiceClient(conn)
-	} else if (clientMS == `keys`) {
-		clients.keys = keys.NewKeysServiceClient(conn)
 	} else if (clientMS == `pictures`) {
 		clients.pictures = pictures.NewPicturesServiceClient(conn)
 		clients.albums = pictures.NewAlbumsServiceClient(conn)
@@ -170,8 +167,6 @@ func	bridgeMicroservice(serverName string, clientMS string) (*grpc.ClientConn){
 
 	if (clientMS == `members`) {
 		clients.members = members.NewMembersServiceClient(conn)
-	} else if (clientMS == `keys`) {
-		clients.keys = keys.NewKeysServiceClient(conn)
 	} else if (clientMS == `pictures`) {
 		clients.pictures = pictures.NewPicturesServiceClient(conn)
 	}
@@ -246,9 +241,5 @@ func	serveMicroservice() {
 
 func	main()	{
 	connectToDatabase()
-
-	bridges = make(map[string](*grpc.ClientConn))
-	bridges[`keys`] = bridgeMicroservice(`panghostlin-keys:8011`, `keys`)
-
 	serveMicroservice()
 }

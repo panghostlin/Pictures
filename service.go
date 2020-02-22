@@ -5,7 +5,7 @@
 ** @Filename:				service.go
 **
 ** @Last modified by:		Tbouder
-** @Last modified time:		Saturday 15 February 2020 - 14:12:58
+** @Last modified time:		Friday 21 February 2020 - 17:38:30
 *******************************************************************************/
 
 package			main
@@ -23,22 +23,8 @@ import (
 	P "github.com/microgolang/postgre"
 )
 
-func	CreatePictureRef(req *pictures.UploadPictureRequest, blob []byte, GroupID, size string, oW, oH uint) (int, int, string, error) {
-	var	width int
-	var	height int
-	var	path string
-	var	encryptionKey string
-	var	err error
-
-	if (size == `original`) {
-		width, height, path, encryptionKey, err = createOriginal(blob, req.GetContent().GetType(), req.GetMemberID())
-	} else {
-		width, height, path, encryptionKey, err = createThumbnails(blob, req.GetContent().GetType(), req.GetMemberID(), size, oW, oH)
-	}
-
-	if (err != nil) {
-		return -1, -1, ``, err
-	}
+func	CreatePictureRef(req *pictures.UploadPictureRequest, GroupID, size string) (string, error) {
+	path := storeDecryptedThumbnail(req.GetChunk(), req.GetContent().GetType(), size)
 
 	unixTimeStamp, _ := strconv.ParseInt(req.GetContent().GetOriginalTime(), 10, 64)
 	timeFormated := time.Unix(0, unixTimeStamp * int64(time.Millisecond)).Format(`2006-01-02 15:04:05`)
@@ -47,23 +33,24 @@ func	CreatePictureRef(req *pictures.UploadPictureRequest, blob []byte, GroupID, 
 		P.S_InsertorWhere{Key: `MemberID`, Value: req.GetMemberID()},
 		P.S_InsertorWhere{Key: `Name`, Value: req.GetContent().GetName()},
 		P.S_InsertorWhere{Key: `Type`, Value: req.GetContent().GetType()},
-		P.S_InsertorWhere{Key: `EncryptionKey`, Value: encryptionKey},
+		P.S_InsertorWhere{Key: `EncryptionKey`, Value: req.GetCrypto().GetKey()},
+		P.S_InsertorWhere{Key: `EncryptionIV`, Value: req.GetCrypto().GetIV()},
 		P.S_InsertorWhere{Key: `Path`, Value: path},
 		P.S_InsertorWhere{Key: `OriginalTime`, Value: timeFormated},
 		P.S_InsertorWhere{Key: `Size`, Value: size},
-		P.S_InsertorWhere{Key: `Width`, Value: strconv.Itoa(width)},
-		P.S_InsertorWhere{Key: `Height`, Value: strconv.Itoa(height)},
-		P.S_InsertorWhere{Key: `Weight`, Value: strconv.FormatInt(int64(len(blob)), 10)},
+		P.S_InsertorWhere{Key: `Width`, Value: strconv.Itoa(int(req.GetContent().GetWidth()))},
+		P.S_InsertorWhere{Key: `Height`, Value: strconv.Itoa(int(req.GetContent().GetHeight()))},
+		P.S_InsertorWhere{Key: `Weight`, Value: strconv.FormatInt(int64(len(req.GetChunk())), 10)},
 	}
 	if (req.GetAlbumID() != ``) {
 		toInsert = append(toInsert, P.S_InsertorWhere{Key: `AlbumID`, Value: req.GetAlbumID()})
 	}
 
-	_, err = P.NewInsertor(PGR).Into(`pictures`).Values(toInsert...).Do()
+	_, err := P.NewInsertor(PGR).Into(`pictures`).Values(toInsert...).Do()
 	if (err != nil) {
-		return -1, -1, ``, err
+		return ``, err
 	}
-	return width, height, timeFormated, nil
+	return timeFormated, nil
 }
 /******************************************************************************
 **	UploadPicture
@@ -95,8 +82,9 @@ func (s *server) UploadPicture(stream pictures.PicturesService_UploadPictureServ
 			/******************************************************************
 			**	Create the reference for the 500x500 picture in the Database
 			******************************************************************/
-			width, height, originalTime, err := CreatePictureRef(req, req.GetChunk(), GroupID, `500x500`, 500, 0)
+			originalTime, err := CreatePictureRef(req, GroupID, `500x500`)
 			if (err != nil) {
+				logs.Error(err)
 				stream.Send(&pictures.UploadPictureResponse{Step: 4, Success: false})
 				stream.Context().Done()
 				return err
@@ -108,7 +96,7 @@ func (s *server) UploadPicture(stream pictures.PicturesService_UploadPictureServ
 			**	original => for better
 			******************************************************************/
 			// go CreatePictureRef(req, req.GetChunk(), GroupID, `1000x1000`, 1000, 0)
-			go CreatePictureRef(req, req.GetChunk(), GroupID, `original`, 0, 0)
+			// go CreatePictureRef(req, req.GetChunk(), GroupID, `original`, 0, 0)
 
 			/******************************************************************
 			**	Send a message to the websocket to inform the client the image
@@ -119,8 +107,8 @@ func (s *server) UploadPicture(stream pictures.PicturesService_UploadPictureServ
 				Picture: &pictures.ListPictures_Content{
 					Uri: GroupID,
 					OriginalTime: originalTime,
-					Width: uint32(width),
-					Height: uint32(height),
+					Width: 500,
+					Height: 500,
 				},
 				Success: true,
 			})
@@ -135,6 +123,7 @@ func (s *server) UploadPicture(stream pictures.PicturesService_UploadPictureServ
 		/**********************************************************************
 		**	Use this for direct streaming
 		**********************************************************************/
+		req.Crypto = recv.GetCrypto()
 		req.MemberID = recv.GetMemberID()
 		req.Content = recv.GetContent()
 		req.AlbumID = recv.GetAlbumID()
@@ -157,14 +146,15 @@ func (s *server) DownloadPicture(req *pictures.DownloadPictureRequest, stream pi
 	var	Path string
 	var	Type string
 	var	EncryptionKey string
+	var	EncryptionIV string
 	var	MemberID string
 	/**************************************************************************
 	**	0. Get the information about the picture we try to access
 	**************************************************************************/
-	err := P.NewSelector(PGR).Select(`Path`, `Type`, `EncryptionKey`, `Width`, `Height`, `MemberID`).From(`pictures`).Where(
+	err := P.NewSelector(PGR).Select(`Path`, `Type`, `EncryptionKey`, `EncryptionIV`, `Width`, `Height`, `MemberID`).From(`pictures`).Where(
 		P.S_SelectorWhere{Key: `GroupID`, Value: req.GetPictureID()},
 		P.S_SelectorWhere{Key: `Size`, Value: req.GetPictureSize()},
-	).One(&Path, &Type, &EncryptionKey, &Width, &Height, &MemberID)
+	).One(&Path, &Type, &EncryptionKey, &EncryptionIV, &Width, &Height, &MemberID)
 	if (err != nil) {
 		logs.Error(`Impossible to get image`, err)
 		return err
@@ -181,27 +171,22 @@ func (s *server) DownloadPicture(req *pictures.DownloadPictureRequest, stream pi
 	}
 
 	/**************************************************************************
-	**	2. Send the MemberID, the encrypted data, and the picture decryption
-	**	key to the pictures microservice to get the decrypted data.
-	**************************************************************************/
-	decryptedData, err := DecryptPicture(MemberID, encryptedData, EncryptionKey, req.GetHashKey())
-	if (err != nil) {
-		logs.Error(`Impossible to decrypt image ` + err.Error())
-		return nil
-	}
-
-	/**************************************************************************
-	**	3. Chunk the file according to DEFAULT_CHUNK_SIZE (64 * 1000) and send
+	**	2. Chunk the file according to DEFAULT_CHUNK_SIZE (64 * 1000) and send
 	**	back the full message to the proxy
 	**************************************************************************/
-	fileSize := len(decryptedData)
-	resp := &pictures.DownloadPictureResponse{ContentType: Type, Width: uint32(Width), Height: uint32(Height)}
+	fileSize := len(encryptedData)
+	resp := &pictures.DownloadPictureResponse{
+		ContentType: Type,
+		Width: uint32(Width),
+		Height: uint32(Height),
+		Crypto: &pictures.PictureCrypto{Key: EncryptionKey, IV: EncryptionIV},
+	}
 
 	for currentByte := 0; currentByte < fileSize; currentByte += DEFAULT_CHUNK_SIZE {
 		if currentByte + DEFAULT_CHUNK_SIZE > fileSize {
-			resp.Chunk = decryptedData[currentByte:fileSize]
+			resp.Chunk = encryptedData[currentByte:fileSize]
 		} else {
-			resp.Chunk = decryptedData[currentByte : currentByte + DEFAULT_CHUNK_SIZE]
+			resp.Chunk = encryptedData[currentByte : currentByte + DEFAULT_CHUNK_SIZE]
 		}
 		if err := stream.Send(resp); err != nil {
 			logs.Error(err)

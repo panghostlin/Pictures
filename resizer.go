@@ -5,7 +5,7 @@
 ** @Filename:				resizer.go
 **
 ** @Last modified by:		Tbouder
-** @Last modified time:		Saturday 15 February 2020 - 14:13:42
+** @Last modified time:		Friday 21 February 2020 - 17:39:45
 *******************************************************************************/
 
 package			main
@@ -22,8 +22,6 @@ import			"github.com/nfnt/resize"
 import			"github.com/microgolang/logs"
 import			"mime"
 import			"errors"
-import			"context"
-import			"github.com/panghostlin/SDK/Keys"
 
 func	getExtFromMime(contentType string) string {
 	ext, err := mime.ExtensionsByType(contentType)
@@ -45,7 +43,8 @@ func	getContentType(blob []byte) {
 		logs.Error(err)
 		return
 	}
-	logs.Pretty(imgConfig, fileType)
+	_ = imgConfig
+	_ = fileType
 }
 func	getBlobSize(blob []byte, contentType string) (uint, uint, error) {
 	var	imgConfig image.Config
@@ -222,66 +221,8 @@ func	generateThumbnail(encryptedData []byte, contentType string, width, height u
 	}
 	return nil, 0, 0, errors.New(`Format not supported`)
 }
-func	createThumbnails(blob []byte, contentType, memberID string, size string, width, height uint) (int, int, string, string, error) {
-	var stream keys.KeysService_EncryptPictureClient
+func	storePicture(blob []byte, contentType, size string) (string, error) {
+	filePath := storeDecryptedThumbnail(blob, contentType, size)
 
-	stream, err := clients.keys.EncryptPicture(context.Background())
-	if (err != nil) {
-		logs.Error("Fail to init stream", err)
-		return -1, -1, ``, ``, err
-	}
-	defer stream.Context().Done()
-	
-	thumbnail, thumbnailWidth, thumbnailHeight, err := generateThumbnail(blob, contentType, width, height)
-	if (err != nil) {
-		logs.Error(err)
-		return -1, -1, ``, ``, err
-	}
-
-	err = encryptPictureSender(stream, thumbnail, memberID)
-	if (err != nil) {
-		logs.Error(`Impossible to encrypt image`, err)
-		return -1, -1, ``, ``, err
-	}
-
-	response, err := encryptPictureReceiver(stream)
-	if (err != nil) {
-		logs.Error(`Impossible to encrypt image`, err)
-		return -1, -1, ``, ``, err
-	}
-
-	filePath := storeDecryptedThumbnail(response.GetChunk(), contentType, size)
-
-	return int(thumbnailWidth), int(thumbnailHeight), filePath, response.GetKey(), nil
-}
-func	createOriginal(blob []byte, contentType, memberID string) (int, int, string, string, error) {
-	var stream keys.KeysService_EncryptPictureClient
-
-	stream, err := clients.keys.EncryptPicture(context.Background())
-	if (err != nil) {
-		logs.Error("Fail to init stream", err)
-		return -1, -1, ``, ``, err
-	}
-	defer stream.Context().Done()
-
-	originalWidth, originalHeight, err := getBlobSize(blob, contentType)
-	if (err != nil) {
-		logs.Error(err)
-		return -1, -1, ``, ``, err
-	}
-	err = encryptPictureSender(stream, blob, memberID)
-	if (err != nil) {
-		logs.Error(`Impossible to encrypt image`, err)
-		return -1, -1, ``, ``, err
-	}
-
-	response, err := encryptPictureReceiver(stream)
-	if (err != nil) {
-		logs.Error(`Impossible to encrypt image`, err)
-		return -1, -1, ``, ``, err
-	}
-
-	filePath := storeDecryptedThumbnail(response.GetChunk(), contentType, `original`)
-
-	return int(originalWidth), int(originalHeight), filePath, response.GetKey(), nil
+	return filePath, nil
 }
