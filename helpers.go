@@ -5,7 +5,7 @@
 ** @Filename:				Helpers.go
 **
 ** @Last modified by:		Tbouder
-** @Last modified time:		Wednesday 29 January 2020 - 15:48:17
+** @Last modified time:		Saturday 22 February 2020 - 11:42:28
 *******************************************************************************/
 
 package			main
@@ -13,22 +13,10 @@ package			main
 import			"os"
 import			"io"
 import			"fmt"
-import			"crypto/rand"
+import			"mime"
 import			"bytes"
+import			"crypto/rand"
 import			"github.com/microgolang/logs"
-
-func	testCreatePicture(buffer []byte) {
-	filePath := `/picturesLogs/` + `test` + `.` + `jpg`
-	f, err := os.Create(filePath)
-	if (err != nil) {
-		logs.Error(`Impossible to create file`, err)
-	}
-	defer f.Close()
-	_, err = io.Copy(f, bytes.NewReader(buffer))
-	if (err != nil) {
-		logs.Error(`Impossible to copy data to file`, err)
-	}
-}
 
 func	generateUUID(n uint32) (string, error) {
 	b := make([]byte, n)
@@ -44,50 +32,15 @@ func	generateUUID(n uint32) (string, error) {
 	return uuid, nil
 }
 
-func	storeEncryptedPicture(encryptedData []byte, contentType string) (string) {
-	imageName, err := generateUUID(32)
-	if (err != nil) {
-		logs.Error(`Impossible to generate UUID`, err)
+func	getExtFromMime(contentType string) string {
+	ext, err := mime.ExtensionsByType(contentType)
+	if (len(ext) == 0 || err != nil) {
 		return ``
 	}
-
-	filePath := `/pictures/` + imageName + getExtFromMime(contentType)
-	f, err := os.Create(filePath)
-	if (err != nil) {
-		logs.Error(`Impossible to create file`, err)
-		return ``
-	}
-	defer f.Close()
-    _, err = io.Copy(f, bytes.NewReader(encryptedData))
-	if (err != nil) {
-		logs.Error(`Impossible to copy data to file`, err)
-		return ``
-	}
-
-	return filePath
+	return ext[0]
 }
-func	storeDecryptedPicture(encryptedData []byte, contentType string) (string) {
-	imageName, err := generateUUID(32)
-	if (err != nil) {
-		logs.Error(`Impossible to generate UUID`, err)
-		return ``
-	}
 
-	filePath := `/pictures/` + imageName + getExtFromMime(contentType)
-	f, err := os.Create(filePath)
-	if (err != nil) {
-		logs.Error(`Impossible to create file`, err)
-		return ``
-	}
-	defer f.Close()
-    _, err = io.Copy(f, bytes.NewReader(encryptedData))
-	if (err != nil) {
-		logs.Error(`Impossible to copy data to file`, err)
-		return ``
-	}
-	return (filePath)
-}
-func	storeDecryptedThumbnail(encryptedData []byte, contentType, size string) (string) {
+func	storePicture(blob []byte, contentType, size string) string {
 	imageName, err := generateUUID(32)
 	if (err != nil) {
 		logs.Error(`Impossible to generate UUID`, err)
@@ -102,7 +55,7 @@ func	storeDecryptedThumbnail(encryptedData []byte, contentType, size string) (st
 		return ``
 	}
 	defer f.Close()
-    _, err = io.Copy(f, bytes.NewReader(encryptedData))
+    _, err = io.Copy(f, bytes.NewReader(blob))
 	if (err != nil) {
 		logs.Error(`Impossible to copy data to file`, err)
 		return ``

@@ -5,7 +5,7 @@
 ** @Filename:				service.go
 **
 ** @Last modified by:		Tbouder
-** @Last modified time:		Friday 21 February 2020 - 17:38:30
+** @Last modified time:		Saturday 22 February 2020 - 11:41:44
 *******************************************************************************/
 
 package			main
@@ -24,7 +24,7 @@ import (
 )
 
 func	CreatePictureRef(req *pictures.UploadPictureRequest, GroupID, size string) (string, error) {
-	path := storeDecryptedThumbnail(req.GetChunk(), req.GetContent().GetType(), size)
+	path := storePicture(req.GetChunk(), req.GetContent().GetType(), size)
 
 	unixTimeStamp, _ := strconv.ParseInt(req.GetContent().GetOriginalTime(), 10, 64)
 	timeFormated := time.Unix(0, unixTimeStamp * int64(time.Millisecond)).Format(`2006-01-02 15:04:05`)
