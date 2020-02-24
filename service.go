@@ -5,7 +5,7 @@
 ** @Filename:				service.go
 **
 ** @Last modified by:		Tbouder
-** @Last modified time:		Saturday 22 February 2020 - 11:41:44
+** @Last modified time:		Sunday 23 February 2020 - 22:45:11
 *******************************************************************************/
 
 package			main
@@ -103,12 +103,12 @@ func (s *server) UploadPicture(stream pictures.PicturesService_UploadPictureServ
 			**	is now in the database.
 			******************************************************************/
 			stream.Send(&pictures.UploadPictureResponse{
-				Step: 4,
+				Step: 3,
 				Picture: &pictures.ListPictures_Content{
 					Uri: GroupID,
 					OriginalTime: originalTime,
-					Width: 500,
-					Height: 500,
+					Width: uint32(req.GetContent().GetWidth()),
+					Height: uint32(req.GetContent().GetHeight()),
 				},
 				Success: true,
 			})
