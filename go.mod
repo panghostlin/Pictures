@@ -11,7 +11,7 @@ require (
 	github.com/microgolang/logs v0.0.0-20191128163715-df5826543c89
 	github.com/microgolang/postgre v0.0.0-20200206183946-fb501c758fd4
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
-	github.com/panghostlin/SDK v0.0.0-20200221162701-18229472aba6
+	github.com/panghostlin/SDK v0.0.0-20200304175451-f4fb5573fa9d
 	golang.org/x/image v0.0.0-20200119044424-58c23975cae1
 	google.golang.org/grpc v1.27.1
 )

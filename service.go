@@ -5,7 +5,7 @@
 ** @Filename:				service.go
 **
 ** @Last modified by:		Tbouder
-** @Last modified time:		Sunday 23 February 2020 - 22:45:11
+** @Last modified time:		Wednesday 04 March 2020 - 18:55:57
 *******************************************************************************/
 
 package			main
@@ -18,18 +18,17 @@ import (
 	"time"
 	"strconv"
 	"github.com/microgolang/logs"
-	"github.com/google/uuid"
 	"github.com/panghostlin/SDK/Pictures"
 	P "github.com/microgolang/postgre"
 )
 
-func	CreatePictureRef(req *pictures.UploadPictureRequest, GroupID, size string) (string, error) {
-	path := storePicture(req.GetChunk(), req.GetContent().GetType(), size)
+func	CreatePictureRef(req *pictures.UploadPictureRequest) (string, error) {
+	path := storePicture(req.GetChunk(), req.GetContent().GetType(), req.GetContent().GetSizeType())
 
 	unixTimeStamp, _ := strconv.ParseInt(req.GetContent().GetOriginalTime(), 10, 64)
 	timeFormated := time.Unix(0, unixTimeStamp * int64(time.Millisecond)).Format(`2006-01-02 15:04:05`)
 	toInsert := []P.S_InsertorWhere{
-		P.S_InsertorWhere{Key: `GroupID`, Value: GroupID},
+		P.S_InsertorWhere{Key: `GroupID`, Value: req.GetContent().GetGroupID()},
 		P.S_InsertorWhere{Key: `MemberID`, Value: req.GetMemberID()},
 		P.S_InsertorWhere{Key: `Name`, Value: req.GetContent().GetName()},
 		P.S_InsertorWhere{Key: `Type`, Value: req.GetContent().GetType()},
@@ -37,7 +36,7 @@ func	CreatePictureRef(req *pictures.UploadPictureRequest, GroupID, size string) 
 		P.S_InsertorWhere{Key: `EncryptionIV`, Value: req.GetCrypto().GetIV()},
 		P.S_InsertorWhere{Key: `Path`, Value: path},
 		P.S_InsertorWhere{Key: `OriginalTime`, Value: timeFormated},
-		P.S_InsertorWhere{Key: `Size`, Value: size},
+		P.S_InsertorWhere{Key: `Size`, Value: req.GetContent().GetSizeType()},
 		P.S_InsertorWhere{Key: `Width`, Value: strconv.Itoa(int(req.GetContent().GetWidth()))},
 		P.S_InsertorWhere{Key: `Height`, Value: strconv.Itoa(int(req.GetContent().GetHeight()))},
 		P.S_InsertorWhere{Key: `Weight`, Value: strconv.FormatInt(int64(len(req.GetChunk())), 10)},
@@ -78,14 +77,13 @@ func (s *server) UploadPicture(stream pictures.PicturesService_UploadPictureServ
 
 		recv, err := stream.Recv()
 		if err == io.EOF {
-			GroupID := uuid.New().String()
 			/******************************************************************
-			**	Create the reference for the 500x500 picture in the Database
+			**	Create the reference for the picture in the Database
 			******************************************************************/
-			originalTime, err := CreatePictureRef(req, GroupID, `500x500`)
+			originalTime, err := CreatePictureRef(req)
 			if (err != nil) {
 				logs.Error(err)
-				stream.Send(&pictures.UploadPictureResponse{Step: 4, Success: false})
+				stream.Send(&pictures.UploadPictureResponse{Success: false})
 				stream.Context().Done()
 				return err
 			}
@@ -103,9 +101,8 @@ func (s *server) UploadPicture(stream pictures.PicturesService_UploadPictureServ
 			**	is now in the database.
 			******************************************************************/
 			stream.Send(&pictures.UploadPictureResponse{
-				Step: 3,
 				Picture: &pictures.ListPictures_Content{
-					Uri: GroupID,
+					Uri: req.GetContent().GetGroupID(),
 					OriginalTime: originalTime,
 					Width: uint32(req.GetContent().GetWidth()),
 					Height: uint32(req.GetContent().GetHeight()),
@@ -249,7 +246,7 @@ func (s *server) ListPicturesByMemberID(ctx context.Context, req *pictures.ListP
 	From(`pictures`).
 	Where(
 		P.S_SelectorWhere{Key: `MemberID`, Value: req.GetMemberID()},
-		P.S_SelectorWhere{Key: `Size`, Value: `500x500`},
+		P.S_SelectorWhere{Key: `Size`, Value: `max500`},
 	).
 	Sort(`OriginalTime`, `DESC`).
 	All(&[]myReturnType{})
@@ -329,7 +326,7 @@ func (s *server) ListPicturesByAlbumID(ctx context.Context, req *pictures.ListPi
 	Where(
 		P.S_SelectorWhere{Key: `AlbumID`, Value: req.GetAlbumID()},
 		P.S_SelectorWhere{Key: `MemberID`, Value: req.GetMemberID()},
-		P.S_SelectorWhere{Key: `Size`, Value: `500x500`},
+		P.S_SelectorWhere{Key: `Size`, Value: `max500`},
 	).
 	Sort(`OriginalTime`, `DESC`).
 	All(&[]myReturnType{})

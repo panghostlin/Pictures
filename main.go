@@ -5,7 +5,7 @@
 ** @Filename:				main.go
 **
 ** @Last modified by:		Tbouder
-** @Last modified time:		Friday 21 February 2020 - 17:49:43
+** @Last modified time:		Wednesday 04 March 2020 - 19:02:16
 *******************************************************************************/
 
 package			main
@@ -55,7 +55,7 @@ func	connectToDatabase() {
 
 	PGR.Exec(`CREATE TABLE if not exists pictures(
 		ID uuid NOT NULL DEFAULT uuid_generate_v4(),
-		GroupID uuid NOT NULL,
+		GroupID varchar NOT NULL,
 		MemberID uuid NOT NULL,
 		AlbumID uuid NULL,
 		Size varchar NULL,
@@ -75,9 +75,9 @@ func	connectToDatabase() {
 		ID uuid NOT NULL DEFAULT uuid_generate_v4(),
 		MemberID uuid NOT NULL,
 		Name varchar NULL,
-		CoverPicture0ID uuid NULL,
-		CoverPicture1ID uuid NULL,
-		CoverPicture2ID uuid NULL,
+		CoverPicture0ID varchar NULL,
+		CoverPicture1ID varchar NULL,
+		CoverPicture2ID varchar NULL,
 		NumberOfPictures int NOT NULL DEFAULT 0,
 		CreationTime TIMESTAMP DEFAULT NOW(),
 		CONSTRAINT albums_pk PRIMARY KEY (ID)
