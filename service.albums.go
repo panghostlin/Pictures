@@ -5,7 +5,7 @@
 ** @Filename:				service.albums.go
 **
 ** @Last modified by:		Tbouder
-** @Last modified time:		Saturday 15 February 2020 - 14:29:12
+** @Last modified time:		Friday 06 March 2020 - 12:05:58
 *******************************************************************************/
 
 
@@ -16,7 +16,6 @@ import (
 	"context"
 	"strconv"
 	"github.com/microgolang/logs"
-	"database/sql"
 	"github.com/panghostlin/SDK/Pictures"
 	P "github.com/microgolang/postgre"
 )
@@ -25,18 +24,16 @@ import (
 **	CreateAlbum
 ******************************************************************************/
 func (s *server) CreateAlbum(ctx context.Context, req *pictures.CreateAlbumRequest) (*pictures.CreateAlbumResponse, error) {
-	coverPicture0ID := strings.Split(req.GetCoverPicture0ID(), `?`)[0]
-	coverPicture1ID := strings.Split(req.GetCoverPicture1ID(), `?`)[0]
-	coverPicture2ID := strings.Split(req.GetCoverPicture2ID(), `?`)[0]
+	coverPicture := strings.Split(req.GetCoverPicture(), `?`)[0]
 
 	toInsert := []P.S_InsertorWhere{
 		P.S_InsertorWhere{Key: `MemberID`, Value: req.GetMemberID()},
 		P.S_InsertorWhere{Key: `Name`, Value: req.GetName()},
 		P.S_InsertorWhere{Key: `NumberOfPictures`, Value: strconv.Itoa(0)},
 	}
-	if (coverPicture0ID != ``) {toInsert = append(toInsert, P.S_InsertorWhere{Key: `CoverPicture0ID`, Value: coverPicture0ID})}
-	if (coverPicture1ID != ``) {toInsert = append(toInsert, P.S_InsertorWhere{Key: `CoverPicture1ID`, Value: coverPicture1ID})}
-	if (coverPicture2ID != ``) {toInsert = append(toInsert, P.S_InsertorWhere{Key: `CoverPicture2ID`, Value: coverPicture2ID})}
+	if (coverPicture != ``) {
+		toInsert = append(toInsert, P.S_InsertorWhere{Key: `CoverPicture`, Value: coverPicture})
+	}
 
 	ID, err := P.NewInsertor(PGR).Into(`albums`).Values(toInsert...).Do()
 
@@ -72,14 +69,10 @@ func (s *server) GetAlbum(ctx context.Context, req *pictures.GetAlbumRequest) (*
 **	SetAlbumCover
 ******************************************************************************/
 func (s *server) SetAlbumCover(ctx context.Context, req *pictures.SetAlbumCoverRequest) (*pictures.SetAlbumCoverResponse, error) {
-	coverPicture0ID := strings.Split(req.GetCoverPicture0ID(), `?`)[0]
-	coverPicture1ID := strings.Split(req.GetCoverPicture1ID(), `?`)[0]
-	coverPicture2ID := strings.Split(req.GetCoverPicture2ID(), `?`)[0]
+	coverPicture := strings.Split(req.GetCoverPicture(), `?`)[0]
 
 	err := P.NewUpdator(PGR).Set(
-		P.S_UpdatorSetter{Key: `CoverPicture0ID`, Value: coverPicture0ID},
-		P.S_UpdatorSetter{Key: `CoverPicture1ID`, Value: coverPicture1ID},
-		P.S_UpdatorSetter{Key: `CoverPicture2ID`, Value: coverPicture2ID},
+		P.S_UpdatorSetter{Key: `CoverPicture`, Value: coverPicture},
 	).Where(
 		P.S_UpdatorWhere{Key: `ID`, Value: req.GetAlbumID()},
 		P.S_UpdatorWhere{Key: `MemberID`, Value: req.GetMemberID()},
@@ -96,15 +89,13 @@ func (s *server) ListAlbums(ctx context.Context, req *pictures.ListAlbumsRequest
 		ID string
 		Name string
 		NumberOfPictures int
-		CoverPicture0ID sql.NullString
-		CoverPicture1ID sql.NullString
-		CoverPicture2ID sql.NullString
+		CoverPicture string
 	}
 	var	response []*pictures.ListAlbumsResponse_Content
 
 	rows, err := P.NewSelector(PGR).
 		From(`albums`).
-		Select(`ID`, `Name`, `NumberOfPictures`, `CoverPicture0ID`, `CoverPicture1ID`, `CoverPicture2ID`).
+		Select(`ID`, `Name`, `NumberOfPictures`, `CoverPicture`).
 		Where(P.S_SelectorWhere{Key: `MemberID`, Value: req.GetMemberID()}).
 		Sort(`CreationTime`, `DESC`).
 		All(&[]myReturnType{})
@@ -119,9 +110,7 @@ func (s *server) ListAlbums(ctx context.Context, req *pictures.ListAlbumsRequest
 			AlbumID: row.ID,
 			Name: row.Name,
 			NumberOfPictures: int32(row.NumberOfPictures),
-			CoverPicture0ID: row.CoverPicture0ID.String,
-			CoverPicture1ID: row.CoverPicture1ID.String,
-			CoverPicture2ID: row.CoverPicture2ID.String,
+			CoverPicture: row.CoverPicture,
 		})
 	}
 

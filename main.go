@@ -5,7 +5,7 @@
 ** @Filename:				main.go
 **
 ** @Last modified by:		Tbouder
-** @Last modified time:		Wednesday 04 March 2020 - 19:02:16
+** @Last modified time:		Friday 06 March 2020 - 13:37:35
 *******************************************************************************/
 
 package			main
@@ -75,9 +75,7 @@ func	connectToDatabase() {
 		ID uuid NOT NULL DEFAULT uuid_generate_v4(),
 		MemberID uuid NOT NULL,
 		Name varchar NULL,
-		CoverPicture0ID varchar NULL,
-		CoverPicture1ID varchar NULL,
-		CoverPicture2ID varchar NULL,
+		CoverPicture varchar NOT NULL,
 		NumberOfPictures int NOT NULL DEFAULT 0,
 		CreationTime TIMESTAMP DEFAULT NOW(),
 		CONSTRAINT albums_pk PRIMARY KEY (ID)
@@ -87,10 +85,11 @@ func	connectToDatabase() {
 	**	Create a function to update the album cover when a cover picture is
 	**	removed
 	**************************************************************************/
-	PGR.Exec(`CREATE OR REPLACE FUNCTION public.removeandreordercover() RETURNS trigger LANGUAGE plpgsql AS $function$ begin update albums set CoverPicture0ID = CoverPicture1ID, CoverPicture1ID = CoverPicture2ID, CoverPicture2ID = null where id = old.AlbumID and old.size = 'original' and CoverPicture0ID = old.GroupID; update albums set CoverPicture1ID = CoverPicture2ID, CoverPicture2ID = null where id = old.AlbumID and old.size = 'original' and CoverPicture1ID = old.GroupID; update albums set CoverPicture2ID = null where id = old.AlbumID and old.size = 'original' and CoverPicture2ID = old.GroupID; RETURN new; END; $function$ ;`)
-	PGR.Exec(`CREATE OR REPLACE FUNCTION public.addcover() RETURNS trigger LANGUAGE plpgsql AS $function$ begin UPDATE albums SET CoverPicture2ID = new.GroupID WHERE id = new.AlbumID AND new.Size = 'original' AND CoverPicture2ID is null and coverpicture0id is not null and coverpicture1id is not null; UPDATE albums SET CoverPicture1ID = new.GroupID WHERE id = new.AlbumID AND new.Size = 'original' AND CoverPicture1ID is null and coverpicture0id is not null; UPDATE albums SET CoverPicture0ID = new.GroupID WHERE id = new.AlbumID AND new.Size = 'original' AND CoverPicture0ID is null; RETURN new; END; $function$ ;`)
-	PGR.Exec(`CREATE trigger a_removeCover AFTER DELETE OR UPDATE on public.pictures for each row execute function removeAndReorderCover();`)
-	PGR.Exec(`CREATE trigger a_insertCover AFTER INSERT OR UPDATE on public.pictures for each row execute function addCover();`)
+	PGR.Exec(`Ccreate or replace
+	function public.remove_cover() returns trigger language plpgsql as $function$ begin update albums set CoverPicture = null where id = old.AlbumID and old.size = 'original' and CoverPicture = old.GroupID; return new; end; $function$ ;`)
+	PGR.Exec(`create or replace function public.add_cover() returns trigger language plpgsql as $function$ begin update albums set CoverPicture = new.GroupID where id = new.AlbumID and new.Size = 'original' and CoverPicture = ''; return new; end; $function$ ;`)
+	PGR.Exec(`CREATE trigger a_removeCover AFTER DELETE OR UPDATE on public.pictures for each row execute function remove_cover();`)
+	PGR.Exec(`CREATE trigger a_insertCover AFTER INSERT OR UPDATE on public.pictures for each row execute function add_cover();`)
 
 	/**************************************************************************
 	**	Create a function to unset the albumID reference of a picture when the
