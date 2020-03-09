@@ -5,7 +5,7 @@
 ** @Filename:				main.go
 **
 ** @Last modified by:		Tbouder
-** @Last modified time:		Friday 06 March 2020 - 13:37:35
+** @Last modified time:		Monday 09 March 2020 - 19:53:12
 *******************************************************************************/
 
 package			main
@@ -66,7 +66,7 @@ func	connectToDatabase() {
 		Path varchar NULL,
 		Width int NULL,
 		Height int NULL,
-		Weight int NULL,
+		Weight float8 NULL,
 		OriginalTime TIMESTAMP DEFAULT NOW(),
 
 		CONSTRAINT pictures_pk PRIMARY KEY (ID)
@@ -75,7 +75,7 @@ func	connectToDatabase() {
 		ID uuid NOT NULL DEFAULT uuid_generate_v4(),
 		MemberID uuid NOT NULL,
 		Name varchar NULL,
-		CoverPicture varchar NOT NULL,
+		CoverPicture varchar NOT NULL DEFAULT '',
 		NumberOfPictures int NOT NULL DEFAULT 0,
 		CreationTime TIMESTAMP DEFAULT NOW(),
 		CONSTRAINT albums_pk PRIMARY KEY (ID)
@@ -85,7 +85,7 @@ func	connectToDatabase() {
 	**	Create a function to update the album cover when a cover picture is
 	**	removed
 	**************************************************************************/
-	PGR.Exec(`Ccreate or replace
+	PGR.Exec(`Create or replace
 	function public.remove_cover() returns trigger language plpgsql as $function$ begin update albums set CoverPicture = null where id = old.AlbumID and old.size = 'original' and CoverPicture = old.GroupID; return new; end; $function$ ;`)
 	PGR.Exec(`create or replace function public.add_cover() returns trigger language plpgsql as $function$ begin update albums set CoverPicture = new.GroupID where id = new.AlbumID and new.Size = 'original' and CoverPicture = ''; return new; end; $function$ ;`)
 	PGR.Exec(`CREATE trigger a_removeCover AFTER DELETE OR UPDATE on public.pictures for each row execute function remove_cover();`)
@@ -104,7 +104,13 @@ func	connectToDatabase() {
 	**************************************************************************/
 	PGR.Exec(`CREATE OR REPLACE FUNCTION public.increase_album_pictures_count() RETURNS trigger LANGUAGE plpgsql AS $function$ begin UPDATE albums SET NumberOfPictures = NumberOfPictures - 1 WHERE id = old.AlbumID AND old.size = 'original';UPDATE albums SET NumberOfPictures = NumberOfPictures + 1 WHERE id = new.AlbumID AND new.size = 'original'; RETURN new; END; $function$;`)
 	PGR.Exec(`CREATE trigger b_increasepictcount AFTER INSERT or UPDATE or DELETE on public.pictures for each row EXECUTE PROCEDURE public.increase_album_pictures_count()`)
-	
+
+	/**************************************************************************
+	**	Create a function to update the member used storage on picture insert
+	**	or delete
+	**************************************************************************/
+	PGR.Exec(`CREATE OR REPLACE FUNCTION public.f_update_member_used_storage() RETURNS trigger LANGUAGE plpgsql AS $function$ BEGIN IF(TG_OP = 'DELETE') THEN update members set usedStorage = usedStorage - old.weight where ID = old.memberID and old.size = 'original'; update members set fullusedStorage = fullusedStorage - old.weight where ID = old.memberID; return old; ELSIF (TG_OP = 'INSERT') THEN update members set usedStorage = usedStorage + new.weight where ID = new.memberID and new.size = 'original'; update members set fullusedStorage = fullusedStorage + new.weight where ID = new.memberID; return new; END IF; END; $function$ ;`)
+	PGR.Exec(`create trigger c_update_member_used_storage before insert or delete on public.pictures for each row execute function f_update_member_used_storage();`)
 	logs.Success(`Connected to DB - Localhost`)
 }
 func	bridgeInsecureMicroservice(serverName string, clientMS string) (*grpc.ClientConn) {
