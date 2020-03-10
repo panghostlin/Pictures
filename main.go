@@ -5,7 +5,7 @@
 ** @Filename:				main.go
 **
 ** @Last modified by:		Tbouder
-** @Last modified time:		Monday 09 March 2020 - 19:53:12
+** @Last modified time:		Tuesday 10 March 2020 - 11:34:23
 *******************************************************************************/
 
 package			main
@@ -86,7 +86,7 @@ func	connectToDatabase() {
 	**	removed
 	**************************************************************************/
 	PGR.Exec(`Create or replace
-	function public.remove_cover() returns trigger language plpgsql as $function$ begin update albums set CoverPicture = null where id = old.AlbumID and old.size = 'original' and CoverPicture = old.GroupID; return new; end; $function$ ;`)
+	function public.remove_cover() returns trigger language plpgsql as $function$ begin update albums set CoverPicture = '' where id = old.AlbumID and old.size = 'original' and CoverPicture = old.GroupID; return new; end; $function$ ;`)
 	PGR.Exec(`create or replace function public.add_cover() returns trigger language plpgsql as $function$ begin update albums set CoverPicture = new.GroupID where id = new.AlbumID and new.Size = 'original' and CoverPicture = ''; return new; end; $function$ ;`)
 	PGR.Exec(`CREATE trigger a_removeCover AFTER DELETE OR UPDATE on public.pictures for each row execute function remove_cover();`)
 	PGR.Exec(`CREATE trigger a_insertCover AFTER INSERT OR UPDATE on public.pictures for each row execute function add_cover();`)
@@ -95,7 +95,7 @@ func	connectToDatabase() {
 	**	Create a function to unset the albumID reference of a picture when the
 	**	album is deleted
 	**************************************************************************/
-	PGR.Exec(`CREATE OR REPLACE FUNCTION public.unsetalbumid() RETURNS trigger LANGUAGE plpgsql AS $function$ begin update pictures set AlbumID = null where AlbumID = old.id; RETURN new; END; $function$ ;`)
+	PGR.Exec(`CREATE OR REPLACE FUNCTION public.unsetalbumid() RETURNS trigger LANGUAGE plpgsql AS $function$ begin update pictures set AlbumID = '' where AlbumID = old.id; RETURN new; END; $function$ ;`)
 	PGR.Exec(`CREATE trigger unsetalbumid AFTER DELETE on public.albums for each row execute function unsetalbumid();`)
 
 	/**************************************************************************
