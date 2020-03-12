@@ -5,7 +5,7 @@
 ** @Filename:				service.go
 **
 ** @Last modified by:		Tbouder
-** @Last modified time:		Friday 06 March 2020 - 14:41:23
+** @Last modified time:		Thursday 12 March 2020 - 21:52:00
 *******************************************************************************/
 
 package			main
@@ -293,7 +293,7 @@ func (s *server) ListPicturesByMemberID(ctx context.Context, req *pictures.ListP
 }
 
 /******************************************************************************
-**	SetPictureAlbum
+**	SetPicturesAlbum
 ******************************************************************************/
 func (s *server) SetPicturesAlbum(ctx context.Context, req *pictures.SetPicturesAlbumRequest) (*pictures.SetPicturesAlbumResponse, error) {
 	err := P.NewUpdator(PGR).Set(
@@ -304,6 +304,20 @@ func (s *server) SetPicturesAlbum(ctx context.Context, req *pictures.SetPictures
 	).Into(`pictures`).Do()
 
 	return &pictures.SetPicturesAlbumResponse{Success: err == nil}, err
+}
+
+/******************************************************************************
+**	SetPicturesDate
+******************************************************************************/
+func (s *server) SetPicturesDate(ctx context.Context, req *pictures.SetPicturesDateRequest) (*pictures.SetPicturesDateResponse, error) {
+	err := P.NewUpdator(PGR).Set(
+		P.S_UpdatorSetter{Key: `OriginalTime`, Value: req.GetNewDate()},
+	).Where(
+		P.S_UpdatorWhere{Key: `GroupID`, Action: `IN`, Values: req.GetGroupIDs()},
+		P.S_UpdatorWhere{Key: `MemberID`, Value: req.GetMemberID()},
+	).Into(`pictures`).Do()
+
+	return &pictures.SetPicturesDateResponse{Success: err == nil}, err
 }
 
 
