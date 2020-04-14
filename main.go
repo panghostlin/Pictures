@@ -5,7 +5,7 @@
 ** @Filename:				main.go
 **
 ** @Last modified by:		Tbouder
-** @Last modified time:		Tuesday 10 March 2020 - 11:34:23
+** @Last modified time:		Tuesday 14 April 2020 - 13:46:27
 *******************************************************************************/
 
 package			main
@@ -95,7 +95,7 @@ func	connectToDatabase() {
 	**	Create a function to unset the albumID reference of a picture when the
 	**	album is deleted
 	**************************************************************************/
-	PGR.Exec(`CREATE OR REPLACE FUNCTION public.unsetalbumid() RETURNS trigger LANGUAGE plpgsql AS $function$ begin update pictures set AlbumID = '' where AlbumID = old.id; RETURN new; END; $function$ ;`)
+	PGR.Exec(`CREATE OR REPLACE FUNCTION public.unsetalbumid() RETURNS trigger LANGUAGE plpgsql AS $function$ begin update pictures set AlbumID = null where AlbumID = old.id; RETURN new; END; $function$ ;`)
 	PGR.Exec(`CREATE trigger unsetalbumid AFTER DELETE on public.albums for each row execute function unsetalbumid();`)
 
 	/**************************************************************************
