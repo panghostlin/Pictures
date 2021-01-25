@@ -6,7 +6,7 @@ require (
 	github.com/chai2010/webp v1.1.0
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fatih/color v1.9.0 // indirect
-	github.com/google/uuid v1.1.1
+	github.com/google/uuid v1.2.0
 	github.com/lib/pq v1.3.0
 	github.com/microgolang/logs v0.0.0-20191128163715-df5826543c89
 	github.com/microgolang/postgre v0.0.0-20200206183946-fb501c758fd4
